@@ -1,6 +1,6 @@
 import tkinter as tk
+from tkinter import scrolledtext as scrolledtext
 from tkinter import ttk as ttk
-from tkinter import scrolledtext
 from tkinter import filedialog as fd
 from tkinter import messagebox
 from PIL import ImageTk, Image
@@ -11,14 +11,14 @@ import os
 from pathlib import Path
 import tkinter.font as font
 from shutil import copyfile
-
-
+import dice
 
 # serialize
 maps_list = []
 map_path = ''
 map_dict = {}
 # /serialise
+
 screenSize = (GetSystemMetrics(0), GetSystemMetrics(1))
 cwd = Path(__file__).parents[0]
 if(os.path.isdir(cwd/"map_images")):
@@ -36,7 +36,8 @@ map_image = None
 pop_up_frame = None
 pop_up_win = None
 
-print(Path.cwd())
+dice.start()
+
 
 def display_map():
     global canvas, map_dict, map_path, map_image
@@ -94,7 +95,7 @@ def start_rect(event):
 
 
 def create_rect(event):
-    global x, y, canvas, map_dict, root, room_name
+    global x, y, canvas, map_dict
     x = canvas.canvasx(x)
     y = canvas.canvasy(y)
     _x2 = canvas.canvasx(event.x)
@@ -114,29 +115,28 @@ def create_rect(event):
 
 
 def create_popup_window(_name):
-    global pop_up_frame, text_box, notes_box, pop_up_win, root, map_dict
+    global pop_up_frame, text_box, notes_box, pop_up_win, map_dict
     pop_up_win = tk.Tk()
     pop_up_frame = ttk.Frame(pop_up_win)
     pop_up_frame.pack()
-    print(map_dict)
-    print(open_notes)
     name_str = 'Name the ' + str(_name)
     if(_name != 'note'):
         ttk.Label(pop_up_frame, text=name_str, font=(18)).pack()
         text_box = ttk.Entry(pop_up_frame, font=(18))
         text_box.pack(side='top')
     else:
-        notes_box = tk.scrolledtext.ScrolledText(
+        notes_box = scrolledtext.ScrolledText(
             pop_up_frame, wrap=tk.WORD, font=(18))
-        #notes_box.delete(1.0, 'end')
         notes_box.insert('end', map_dict[open_notes][1])
         notes_box.pack(side='top')
+        pop_up_win.title(open_notes)
 
     def save_text(*args):
         global room_name, map_name
         nonlocal _name
         if(_name == 'note'):
             map_dict[open_notes][1] = notes_box.get(index1='1.0', index2='end')
+            save_all()
         elif(_name == "map"):
             map_name = text_box.get()
         elif(_name == 'room'):
@@ -144,7 +144,8 @@ def create_popup_window(_name):
         pop_up_win.destroy()
 
     pop_up_win.bind("<Escape>", save_text)
-    pop_up_win.bind("<Return>", save_text)
+    if(_name != 'note'):
+        pop_up_win.bind("<Return>", save_text)
     pop_up_win.protocol("WM_DELETE_WINDOW", save_text)
     pop_up_win.wait_window(pop_up_win)
 
@@ -177,14 +178,12 @@ def load_map():
 
 
 def on_close_main():
-    global map_name
-    if (messagebox.askokcancel("Quit", "Do you really wish to quit? \n(everything will be saved)")):
-        if(map_name != ''):
-            save_and_close()
-        root.destroy()
+    if(map_name != ''):
+        save_all()
+    root.destroy()
 
 
-def save_and_close():
+def save_all():
     global map_name,  maps_list, map_path, map_dict
     maps_list.append(map_dict)
     pickle_list = [map_name, maps_list, map_path, map_dict]
